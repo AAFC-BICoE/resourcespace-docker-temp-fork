@@ -1,8 +1,3 @@
-Refer to https://github.com/resourcespace/docker
-
-This is a temporary for for upstream contribution to https://github.com/resourcespace/docker
-
-
 # resourcespace/docker
 The official Docker image for ResourceSpace. Full build instructions can be found on our [Knowledge Base](https://www.resourcespace.com/knowledge-base/systemadmin/install_docker).
 

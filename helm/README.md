@@ -21,7 +21,7 @@ OpenShift with:
 ---
 
 ## Image Build
-The image should be built from the official source repository and pushed to an available registry
+ResourceSpace does not publish a pre-built image. The image must be built from the official source repository and pushed to an internal registry
 ### Source
 ```bash
 git clone git@github.com:resourcespace/docker.git # for SSH clone
@@ -94,20 +94,15 @@ resourcespace:
   hostname: <your-application-hostname> # Example: resourcespace.apps.mycluster.example.com
 mariadb:
   auth:
-    rootPassword: "" # set in advance or at runtime
+    rootPassword: "<secure-password>"
     database: "resourcespace"
     username: "resourcespace"
-    password: "" # set in advance or at runtime
+    password: "<secure-password>"
 ```
 ### Install
 ```bash
 oc new-project <namespace> # skip if namespace already exists
 helm install resourcespace . -n <namespace> # run in dir where values.yaml is
-
-# install with secret creation
-helm install resourcespace . -n <namespace> \
-  --set mariadb.auth.rootPassword=<secure-password> \
-  --set mariadb.auth.password=<secure-password>
 ```
 
 ### Upgrade
@@ -121,40 +116,31 @@ helm uninstall resourcespace -n <namespace>
 ```
 
 ## Run Setup Wizard
-
-On first deployment, navigating to the route URL shows the ResourceSpace setup wizard.
-
-### Known Issue — Base URL Check
-
-The wizard validates the base URL by fetching `license.txt` from it. This fails when
-using the public route URL because the pod cannot route back to itself through the
-external ingress. **Workaround:** enter the internal service URL during setup:
+On first deployment, navigating to the route URL shows the ResourceSpace setup wizard
+### Known Issue - Base URL Check
+The wizard validates the base URL by fetching `license.txt` from it. This fails when using the public route URL because the pod cannot route back to itself through the external ingress. **Workaround:** Enter the internal service URL during setup:
 ```
 http://resourcespace
 ```
-The entrypoint automatically corrects this to the public route URL on every startup
-via the `RS_BASEURL` environment variable — no manual fix needed.
-
 ### Database Settings
-
 | Field | Value |
 |---|---|
-| MySQL server | `resourcespace-mariadb` |
+| MySQL server | `resourcespace-mariadb |
 | MySQL port | `3306` |
-| MySQL database | value of `mariadb.auth.database` in values.yaml |
-| MySQL username | value of `mariadb.auth.username` in values.yaml |
-| MySQL password | value of `mariadb.auth.password` in values.yaml |
-| MySQL binary path | *(leave empty)* |
-| Filestore path | `/var/www/html/filestore` |
+| MySQL database | values of `mariadb.auth.database` |
+| MySQL username | values of `mariadb.auth.username` |
+| MySQL password | values of `mariadb.auth.password` |
+| MySQL binary path | (leave empty) |
+| Filestore path | `/var/www/htlm/filestore` |
 
-### Persisting Configuration
-
-After completing the wizard, restart the pod to persist `config.php` and apply the
-correct public route URL automatically:
-
+### Fix Base URL after setup
+After completing the wizard, the internal URL will have been written to `config.php`. Fix it to the public route URL:
 ```bash
-oc rollout restart deployment/resourcespace -n <namespace>
-```
+oc exec -n <namespace> deployment/resourcespace -- \
+  sed -i "s|<Route-URL>|g" \
+  /var/www/html/include/config.php
 
-The entrypoint saves `config.php` to the filestore PVC on first run and restores it
-with the correct `RS_BASEURL` on every subsequent restart.
+# Verify
+oc exec -n <namespace> deployment/resourcespace -- \
+  grep baseurl /var/www/html/include/config.php
+```
